@@ -24,9 +24,11 @@ const required = {
   GOOGLE_SHEET_ID,
 };
 
-const chatBot8 = -1004340537942;
+// const chatBot8 = -1004340537942;
+const chatBot8 = -5158137930;
 const chatHost8 = -1003727360841;
-const chatBot9 = -1004327923730;
+// const chatBot9 = -1004327923730;
+const chatBot9 = -5496796088;
 const chatHost9 = -1004392595938;
 
 for (const [key, value] of Object.entries(required)) {
