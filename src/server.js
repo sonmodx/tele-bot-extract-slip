@@ -234,7 +234,7 @@ app.post("/telegram/webhook", async (req, res) => {
 
   // Do not process the same update twice within this process.
   // Use persistent storage for production deduplication.
-
+  res.sendStatus(200);
   try {
     if (message.text === "/start") {
       await sendMessage(
@@ -262,7 +262,6 @@ app.post("/telegram/webhook", async (req, res) => {
       chatId,
       `Recorded successfully!\n\nTimestamp: ${timestamp}\nTotal payment: ฿${amount.toFixed(2)}`,
     );
-    res.sendStatus(200);
   } catch (error) {
     console.error("Payment processing failed:", error);
 
