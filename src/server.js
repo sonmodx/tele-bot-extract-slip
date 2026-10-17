@@ -200,6 +200,7 @@ async function extractPayment(image) {
 
   const result = JSON.parse(text);
   const amount = result.amount;
+  console.log("Extracted result:", result);
 
   if (
     result.readable !== true ||
