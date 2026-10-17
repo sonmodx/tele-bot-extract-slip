@@ -250,6 +250,7 @@ app.post("/telegram/webhook", async (req, res) => {
     const update = req.body;
     const message = update?.message;
     const chatId = message?.chat?.id;
+    console.log("Received message from chat ID:", chatId);
 
     if (!message || chatId == null) {
       return res.sendStatus(200);
@@ -285,7 +286,7 @@ app.post("/telegram/webhook", async (req, res) => {
     return res.sendStatus(200);
   } catch (error) {
     console.error("Webhook processing failed:", error.message);
-
+    console.log("Response headers sent:", res.headersSent);
     // Do not send a second response if headers have already been sent.
     if (!res.headersSent) {
       return res.sendStatus(500);
