@@ -343,6 +343,7 @@ app.post("/telegram/webhook", async (req, res) => {
     const message = update?.message;
     chatId = message?.chat?.id;
     console.log("Received message from chat ID:", chatId);
+    console.log("Request body:", req.body);
 
     if (!message || chatId == null) {
       return res.sendStatus(200);
