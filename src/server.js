@@ -340,13 +340,14 @@ app.post("/telegram/webhook", async (req, res) => {
   let chatId; // Accessible in both try and catch
   try {
     const update = req.body;
-    const message = update?.message;
+    let message = update?.message;
     chatId = message?.chat?.id;
     console.log("Received message from chat ID:", chatId);
     console.log("Request body:", req.body);
 
     if (!message || chatId == null) {
-      return res.sendStatus(200);
+      message = update?.channel_post;
+      chatId = message?.chat?.id;
     }
 
     if (message.text === "/start") {
