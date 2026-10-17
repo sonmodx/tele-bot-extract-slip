@@ -100,35 +100,61 @@ async function downloadTelegramPhoto(fileId) {
     validateStatus: (status) => status === 200,
   });
 
-  console.log("Downloaded image size:", response.data.length, "bytes");
+  const buffer = Buffer.from(response.data);
+
+  console.log("Downloaded image size:", buffer.length, "bytes");
   console.log(
     "Downloaded image content-type:",
     response.headers["content-type"],
   );
 
-  const contentType = String(response.headers["content-type"] || "")
-    .split(";")[0]
-    .toLowerCase();
-
-  const mimeTypes = {
-    "image/jpeg": "jpeg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-
-  if (!mimeTypes[contentType]) {
-    throw new Error("Use a JPEG, PNG, or WebP payment slip");
-  }
-
-  const buffer = Buffer.from(response.data);
-
   if (buffer.length === 0) {
     throw new Error("Downloaded image is empty");
   }
 
+  if (buffer.length > 10 * 1024 * 1024) {
+    throw new Error("Image exceeds the 10 MB application limit");
+  }
+
+  // Detect the actual format from the binary signature.
+  let mimeType;
+
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    mimeType = "image/jpeg";
+  } else if (
+    buffer.length >= 8 &&
+    buffer
+      .subarray(0, 8)
+      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
+    mimeType = "image/png";
+  } else if (
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    mimeType = "image/webp";
+  } else {
+    console.error(
+      "Unknown file signature:",
+      buffer.subarray(0, 16).toString("hex"),
+    );
+
+    throw new Error(
+      "Unsupported image format. Please send a JPEG, PNG, or WebP image.",
+    );
+  }
+
+  console.log("Detected image format:", mimeType);
+
   return {
     base64: buffer.toString("base64"),
-    mimeType: contentType,
+    mimeType,
   };
 }
 
