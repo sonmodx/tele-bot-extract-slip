@@ -210,6 +210,7 @@ async function extractPayment(image) {
   if (!text) {
     throw new Error("AI returned an empty result");
   }
+  console.log("Received AI response:", text);
 
   const result = JSON.parse(text);
   console.log("Extracted result:", result);
@@ -307,10 +308,11 @@ app.get("/", (_req, res) => {
 });
 
 app.post("/telegram/webhook", async (req, res) => {
+  let chatId; // Accessible in both try and catch
   try {
     const update = req.body;
     const message = update?.message;
-    const chatId = message?.chat?.id;
+    chatId = message?.chat?.id;
     console.log("Received message from chat ID:", chatId);
 
     if (!message || chatId == null) {
