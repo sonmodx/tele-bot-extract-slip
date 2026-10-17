@@ -5,8 +5,7 @@ import OpenAI from "openai";
 import axios from "axios";
 
 const app = express();
-// app.use(express.json({ limit: "1mb" }));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 const {
   TELEGRAM_BOT_TOKEN,
@@ -90,46 +89,40 @@ async function downloadTelegramPhoto(fileId) {
     throw new Error("Telegram did not return a file path");
   }
 
-  // Telegram Bot API file downloads are limited to 20 MB.
   const url = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${file.file_path}`;
 
   const response = await axios.get(url, {
     timeout: 20000,
     family: 4,
+    responseType: "arraybuffer",
+    maxContentLength: 10 * 1024 * 1024,
+    maxBodyLength: 10 * 1024 * 1024,
+    validateStatus: (status) => status === 200,
   });
 
-  if (!response.ok) {
-    throw new Error("Unable to download the Telegram image");
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-
-  if (!contentType.startsWith("image/")) {
-    throw new Error("The downloaded file is not an image");
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-
-  if (buffer.length > 10 * 1024 * 1024) {
-    throw new Error("Image exceeds the 10 MB application limit");
-  }
+  const contentType = String(response.headers["content-type"] || "")
+    .split(";")[0]
+    .toLowerCase();
 
   const mimeTypes = {
     "image/jpeg": "jpeg",
     "image/png": "png",
     "image/webp": "webp",
-    "image/gif": "gif",
   };
 
-  const format = mimeTypes[contentType.split(";")[0].toLowerCase()];
-
-  if (!format || format === "gif") {
+  if (!mimeTypes[contentType]) {
     throw new Error("Use a JPEG, PNG, or WebP payment slip");
+  }
+
+  const buffer = Buffer.from(response.data);
+
+  if (buffer.length === 0) {
+    throw new Error("Downloaded image is empty");
   }
 
   return {
     base64: buffer.toString("base64"),
-    mimeType: contentType.split(";")[0].toLowerCase(),
+    mimeType: contentType,
   };
 }
 
@@ -220,35 +213,28 @@ app.get("/", (_req, res) => {
 });
 
 app.post("/telegram/webhook", async (req, res) => {
-  //   const secret = req.get("X-Telegram-Bot-Api-Secret-Token");
-
-  const update = req.body;
-  const message = update?.message;
-  const chatId = message?.chat?.id;
-  console.log("Received message:", update);
-
-  // Acknowledge unsupported Telegram updates without processing them.
-  if (!message || !chatId) {
-    return res.sendStatus(200);
-  }
-
-  // Do not process the same update twice within this process.
-  // Use persistent storage for production deduplication.
-  res.sendStatus(200);
   try {
+    const update = req.body;
+    const message = update?.message;
+    const chatId = message?.chat?.id;
+
+    if (!message || chatId == null) {
+      return res.sendStatus(200);
+    }
+
     if (message.text === "/start") {
       await sendMessage(
         chatId,
-        "Send me a payment slip image, and I will extract its total and record it in Google Sheets.",
+        "Send me a payment slip image to extract its amount.",
       );
-      return;
+      return res.sendStatus(200);
     }
-    console.log("Received message:", req.body);
+
     const photos = message.photo;
 
     if (!photos?.length) {
       await sendMessage(chatId, "Please send a payment slip as an image.");
-      return;
+      return res.sendStatus(200);
     }
 
     await sendMessage(chatId, "Processing your payment slip...");
@@ -262,18 +248,15 @@ app.post("/telegram/webhook", async (req, res) => {
       chatId,
       `Recorded successfully!\n\nTimestamp: ${timestamp}\nTotal payment: ฿${amount.toFixed(2)}`,
     );
-  } catch (error) {
-    console.error("Payment processing failed:", error);
 
-    try {
-      await sendMessage(
-        chatId,
-        "I couldn't extract or save this payment slip. Please check the image and try again. No successful save is confirmed.",
-      );
-    } catch (sendError) {
-      console.error("Could not send Telegram reply:", sendError);
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("Webhook processing failed:", error.message);
+
+    // Do not send a second response if headers have already been sent.
+    if (!res.headersSent) {
+      return res.sendStatus(500);
     }
-    res.sendStatus(500);
   }
 });
 
