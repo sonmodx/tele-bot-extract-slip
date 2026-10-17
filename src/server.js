@@ -11,7 +11,7 @@ const {
   TELEGRAM_BOT_TOKEN,
 
   OPENROUTER_API_KEY,
-  OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free",
+  OPENROUTER_MODEL = "google/gemma-4-31b-it:free",
   GOOGLE_SHEET_ID,
   GOOGLE_SHEET_TAB = "Payments",
   PORT = 3000,
