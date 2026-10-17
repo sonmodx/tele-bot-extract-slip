@@ -11,7 +11,7 @@ const {
   TELEGRAM_BOT_TOKEN,
 
   OPENROUTER_API_KEY,
-  OPENROUTER_MODEL = "google/gemma-4-31b-it:free",
+  OPENROUTER_MODEL = "openrouter/free",
   GOOGLE_SHEET_ID,
   GOOGLE_SHEET_TAB = "Payments",
   PORT = 3000,
@@ -166,12 +166,16 @@ async function extractPayment(image) {
       {
         role: "system",
         content: [
-          "Extract the total transferred amount from a Thai bank slip.",
-          "Return JSON only with amount, currency, and readable.",
-          "Do not guess unclear amounts.",
+          "Extract payment information from a Thai bank transfer slip.",
+          "Return valid JSON only with amount, currency, transactionDate, transactionTime, and readable.",
           "amount must be a number or null.",
           "currency must be THB when identifiable, otherwise null.",
-          "readable must be a boolean.",
+          "transactionDate must use YYYY-MM-DD format or null.",
+          "transactionTime must use HH:mm:ss in 24-hour format or null.",
+          "Extract the actual transaction date and time printed on the slip, not the current date or time.",
+          "Convert Buddhist Era years to Gregorian years when necessary. For example, 2569 becomes 2026.",
+          "Do not guess missing or unclear values. Return null for unclear date or time.",
+          "readable must be true only when the slip is readable enough to identify the payment amount confidently.",
           "A slip image does not prove a genuine transfer.",
         ].join(" "),
       },
@@ -180,7 +184,7 @@ async function extractPayment(image) {
         content: [
           {
             type: "text",
-            text: "Extract the total payment from this image.",
+            text: "Extract the payment amount, transaction date, and transaction time from this slip.",
           },
           {
             type: "image_url",
@@ -196,11 +200,14 @@ async function extractPayment(image) {
 
   const text = response.choices[0]?.message?.content;
 
-  if (!text) throw new Error("AI returned an empty result");
+  if (!text) {
+    throw new Error("AI returned an empty result");
+  }
 
   const result = JSON.parse(text);
-  const amount = result.amount;
   console.log("Extracted result:", result);
+
+  const amount = result.amount;
 
   if (
     result.readable !== true ||
@@ -213,32 +220,66 @@ async function extractPayment(image) {
     throw new Error("Could not confidently extract a valid THB amount");
   }
 
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
+  // Validate the date format and calendar date.
+  const validDate = (date) => {
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return false;
+    }
+
+    const parsed = new Date(`${date}T00:00:00Z`);
+
+    return (
+      !Number.isNaN(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === date
+    );
+  };
+
+  // Validate 24-hour time, allowing seconds to be omitted.
+  const validTime = (time) =>
+    typeof time === "string" &&
+    /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(time);
+
+  const transactionDate = validDate(result.transactionDate)
+    ? result.transactionDate
+    : null;
+
+  let transactionTime = validTime(result.transactionTime)
+    ? result.transactionTime
+    : null;
+
+  if (transactionTime && transactionTime.length === 5) {
+    transactionTime += ":00";
+  }
+
+  return {
+    amount: Math.round((amount + Number.EPSILON) * 100) / 100,
+    currency: "THB",
+    transactionDate,
+    transactionTime,
+  };
 }
 
-async function appendPayment(amount) {
-  const timestamp = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date());
-
+async function appendPayment(payment) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEET_ID,
-    range: `'${GOOGLE_SHEET_TAB.replace(/'/g, "''")}'!A:B`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
+    range: `${GOOGLE_SHEET_TAB}!A:D`,
+    valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[timestamp, amount]],
+      values: [
+        [
+          new Date().toISOString(),
+          payment.amount,
+          payment.transactionDate ?? "",
+          payment.transactionTime ?? "",
+        ],
+      ],
     },
   });
 
-  return timestamp;
+  return {
+    transactionDate: payment.transactionDate ?? null,
+    transactionTime: payment.transactionTime ?? null,
+  };
 }
 
 app.get("/", (_req, res) => {
@@ -275,21 +316,29 @@ app.post("/telegram/webhook", async (req, res) => {
 
     const photo = photos[photos.length - 1];
     const image = await downloadTelegramPhoto(photo.file_id);
-    const amount = await extractPayment(image);
-    const timestamp = await appendPayment(amount);
+    const payment = await extractPayment(image);
+    const transaction = await appendPayment(payment);
 
     await sendMessage(
       chatId,
-      `Recorded successfully!\n\nTimestamp: ${timestamp}\nTotal payment: ฿${amount.toFixed(2)}`,
+      `Recorded successfully!\n\nTimestamp: ${transaction.transactionDate} ${transaction.transactionTime}\nTotal payment: ฿${payment.amount.toFixed(2)}`,
     );
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error("Webhook processing failed:", error.message);
-    console.log("Response headers sent:", res.headersSent);
-    // Do not send a second response if headers have already been sent.
+    console.error("Payment processing failed:", error);
+
+    try {
+      await sendMessage(
+        chatId,
+        "I couldn't process this slip. Please check it and try again.",
+      );
+    } catch (sendError) {
+      console.error("Could not send Telegram reply:", sendError.message);
+    }
+
     if (!res.headersSent) {
-      return res.sendStatus(500);
+      return res.sendStatus(200); //Prevent Telegram from retrying the webhook on error
     }
   }
 });
