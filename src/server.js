@@ -24,6 +24,11 @@ const required = {
   GOOGLE_SHEET_ID,
 };
 
+const chatBot8 = -1004340537942;
+const chatHost8 = -1003727360841;
+const chatBot9 = -1004327923730;
+const chatHost9 = -1004392595938;
+
 for (const [key, value] of Object.entries(required)) {
   if (!value) throw new Error(`Missing environment variable: ${key}`);
 }
@@ -259,16 +264,31 @@ async function extractPayment(image) {
   };
 }
 
-async function appendPayment(payment) {
+async function appendPayment(payment, chatId) {
+  let range;
+
+  if (String(chatId) === String(chatBot8)) {
+    range = `${GOOGLE_SHEET_TAB}!B:C`;
+  } else if (String(chatId) === String(chatHost8)) {
+    range = `${GOOGLE_SHEET_TAB}!D:E`;
+  } else if (String(chatId) === String(chatBot9)) {
+    range = `${GOOGLE_SHEET_TAB}!J:K`;
+  } else if (String(chatId) === String(chatHost9)) {
+    range = `${GOOGLE_SHEET_TAB}!L:M`;
+  } else {
+    throw new Error(`Unauthorized chat ID: ${chatId}`);
+  }
+
   await sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEET_ID,
-    range: `${GOOGLE_SHEET_TAB}!B:C`,
+    range,
     valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
     requestBody: {
       values: [
         [
           payment.amount,
-          `${payment.transactionDate ?? ""} ${payment.transactionTime ?? ""}`,
+          `${payment.transactionDate ?? ""} ${payment.transactionTime ?? ""}`.trim(),
         ],
       ],
     },
@@ -315,7 +335,7 @@ app.post("/telegram/webhook", async (req, res) => {
     const photo = photos[photos.length - 1];
     const image = await downloadTelegramPhoto(photo.file_id);
     const payment = await extractPayment(image);
-    const transaction = await appendPayment(payment);
+    const transaction = await appendPayment(payment, chatId);
 
     await sendMessage(
       chatId,
