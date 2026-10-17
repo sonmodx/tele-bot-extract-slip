@@ -100,6 +100,12 @@ async function downloadTelegramPhoto(fileId) {
     validateStatus: (status) => status === 200,
   });
 
+  console.log("Downloaded image size:", response.data.length, "bytes");
+  console.log(
+    "Downloaded image content-type:",
+    response.headers["content-type"],
+  );
+
   const contentType = String(response.headers["content-type"] || "")
     .split(";")[0]
     .toLowerCase();
