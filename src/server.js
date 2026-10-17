@@ -268,38 +268,67 @@ async function extractPayment(image) {
 }
 
 async function appendPayment(payment, chatId) {
-  let range;
+  let startColumn;
+  let dateTimeColumn;
 
   if (String(chatId) === String(chatBot8)) {
-    range = `${GOOGLE_SHEET_TAB}!B:C`;
+    startColumn = "B";
+    dateTimeColumn = "C";
   } else if (String(chatId) === String(chatHost8)) {
-    range = `${GOOGLE_SHEET_TAB}!D:E`;
+    startColumn = "D";
+    dateTimeColumn = "E";
   } else if (String(chatId) === String(chatBot9)) {
-    range = `${GOOGLE_SHEET_TAB}!J:K`;
+    startColumn = "J";
+    dateTimeColumn = "K";
   } else if (String(chatId) === String(chatHost9)) {
-    range = `${GOOGLE_SHEET_TAB}!L:M`;
+    startColumn = "L";
+    dateTimeColumn = "M";
   } else {
     throw new Error(`Unauthorized chat ID: ${chatId}`);
   }
 
-  await sheets.spreadsheets.values.append({
+  // Read existing transaction date/time values from row 6 onward.
+  const readResult = await sheets.spreadsheets.values.get({
     spreadsheetId: GOOGLE_SHEET_ID,
-    range,
+    range: `${GOOGLE_SHEET_TAB}!${dateTimeColumn}6:${dateTimeColumn}`,
+  });
+
+  const rows = readResult.data.values ?? [];
+
+  // Find the last non-empty date/time cell.
+  let lastFilledIndex = -1;
+
+  rows.forEach((row, index) => {
+    if (row[0] != null && String(row[0]).trim() !== "") {
+      lastFilledIndex = index;
+    }
+  });
+
+  // Start at row 6, or the row after the last record.
+  const nextRow = 6 + lastFilledIndex + 1;
+  const endColumn = dateTimeColumn;
+
+  const transactionDateTime =
+    `${payment.transactionDate ?? ""} ${payment.transactionTime ?? ""}`.trim();
+
+  // Write to the exact row and columns.
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range: `${GOOGLE_SHEET_TAB}!${startColumn}${nextRow}:${endColumn}${nextRow}`,
     valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
     requestBody: {
-      values: [
-        [
-          payment.amount,
-          `${payment.transactionDate ?? ""} ${payment.transactionTime ?? ""}`.trim(),
-        ],
-      ],
+      values: [[payment.amount, transactionDateTime]],
     },
   });
+
+  console.log(
+    `Payment saved: chatId=${chatId}, range=${startColumn}${nextRow}:${endColumn}${nextRow}`,
+  );
 
   return {
     transactionDate: payment.transactionDate ?? null,
     transactionTime: payment.transactionTime ?? null,
+    row: nextRow,
   };
 }
 
