@@ -1,0 +1,31 @@
+{
+  "name": "telegram-bot-extract-payment-slip",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@line/bot-sdk": "^11.3.0",
+    "axios": "^1.20.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "firebase-admin": "^14.5.0",
+    "googleapis": "^186.0.0",
+    "jsqr": "^1.4.0",
+    "openai": "^7.36.0",
+    "sharp": "^0.35.5",
+    "undici": "^8.12.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
