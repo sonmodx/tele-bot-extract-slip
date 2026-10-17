@@ -262,15 +262,13 @@ async function extractPayment(image) {
 async function appendPayment(payment) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEET_ID,
-    range: `${GOOGLE_SHEET_TAB}!A:D`,
+    range: `${GOOGLE_SHEET_TAB}!B:C`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [
         [
-          new Date().toISOString(),
           payment.amount,
-          payment.transactionDate ?? "",
-          payment.transactionTime ?? "",
+          `${payment.transactionDate ?? ""} ${payment.transactionTime ?? ""}`,
         ],
       ],
     },
