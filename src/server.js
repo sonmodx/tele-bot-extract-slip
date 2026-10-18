@@ -272,17 +272,17 @@ async function appendPayment(payment, chatId) {
   let dateTimeColumn;
 
   if (String(chatId) === String(chatBot8)) {
-    startColumn = "B";
-    dateTimeColumn = "C";
+    startColumn = "A";
+    dateTimeColumn = "B";
   } else if (String(chatId) === String(chatHost8)) {
-    startColumn = "D";
-    dateTimeColumn = "E";
+    startColumn = "C";
+    dateTimeColumn = "D";
   } else if (String(chatId) === String(chatBot9)) {
-    startColumn = "J";
-    dateTimeColumn = "K";
+    startColumn = "F";
+    dateTimeColumn = "G";
   } else if (String(chatId) === String(chatHost9)) {
-    startColumn = "L";
-    dateTimeColumn = "M";
+    startColumn = "H";
+    dateTimeColumn = "I";
   } else {
     throw new Error(`Unauthorized chat ID: ${chatId}`);
   }
