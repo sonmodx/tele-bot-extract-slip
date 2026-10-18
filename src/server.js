@@ -340,14 +340,13 @@ app.post("/telegram/webhook", async (req, res) => {
   let chatId; // Accessible in both try and catch
   try {
     const update = req.body;
-    let message = update?.message;
+    const message = update?.message ?? update?.channel_post;
     chatId = message?.chat?.id;
-    console.log("Received message from chat ID:", chatId);
     console.log("Request body:", req.body);
+    console.log("Received message from chat ID:", chatId);
 
     if (!message || chatId == null) {
-      message = update?.channel_post;
-      chatId = message?.chat?.id;
+      return res.sendStatus(200);
     }
 
     if (message.text === "/start") {
@@ -355,16 +354,18 @@ app.post("/telegram/webhook", async (req, res) => {
         chatId,
         "Send me a payment slip image to extract its amount.",
       );
-      return res.sendStatus(200);
+      return;
     }
 
     const photos = message.photo;
 
     if (!photos?.length) {
+      res.sendStatus(200);
       await sendMessage(chatId, "Please send a payment slip as an image.");
-      return res.sendStatus(200);
+      return;
     }
 
+    res.sendStatus(200); // Acknowledge Telegram before doing slow work.
     await sendMessage(chatId, "Processing your payment slip...");
 
     const photo = photos[photos.length - 1];
