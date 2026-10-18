@@ -305,7 +305,7 @@ async function appendPayment(payment, chatId) {
   });
 
   // Start at row 6, or the row after the last record.
-  const nextRow = 6 + lastFilledIndex + 1;
+  const nextRow = 7 + lastFilledIndex + 1;
   const endColumn = dateTimeColumn;
 
   const transactionDateTime =
