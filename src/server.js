@@ -377,7 +377,7 @@ app.post("/telegram/webhook", async (req, res) => {
       chatId,
       `Recorded successfully!\n\nTimestamp: ${transaction.transactionDate} ${transaction.transactionTime}\nTotal payment: ฿${payment.amount.toFixed(2)}`,
     );
-
+    await sendMessage(-5158137930, `Recorded successfully! Chat ID: ${chatId}`);
     return;
   } catch (error) {
     console.error("Payment processing failed:", error);
