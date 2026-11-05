@@ -348,6 +348,7 @@ app.post("/telegram/webhook", async (req, res) => {
     if (!message || chatId == null) {
       return res.sendStatus(200);
     }
+    await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
 
     if (message.text === "/start") {
       await sendMessage(
