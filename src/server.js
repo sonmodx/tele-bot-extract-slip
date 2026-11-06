@@ -205,7 +205,7 @@ async function extractPayment(image) {
     response_format: { type: "json_object" },
   });
 
-  const text = response.choices[0]?.message?.content;
+  const text = response.choicesx[0]?.message?.content;
 
   if (!text) {
     throw new Error("AI returned an empty result");
@@ -351,9 +351,13 @@ app.post("/telegram/webhook", async (req, res) => {
     await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
 
     if (message.text === "/start") {
+      // await sendMessage(
+      //   chatId,
+      //   "Send me a payment slip image to extract its amount.",
+      // );
       await sendMessage(
         chatId,
-        "Send me a payment slip image to extract its amount.",
+        "โปรดส่งสลิปการโอนเงินเป็นรูปภาพเพื่อตรวจสอบยอดเงิน",
       );
       return;
     }
@@ -362,21 +366,32 @@ app.post("/telegram/webhook", async (req, res) => {
 
     if (!photos?.length) {
       res.sendStatus(200);
-      await sendMessage(chatId, "Please send a payment slip as an image.");
+      // await sendMessage(chatId, "Please send a payment slip as an image.");
+      await sendMessage(chatId, "โปรดส่งสลิปเป็นรูปภาพเท่านั้น");
+
       return;
     }
 
     res.sendStatus(200); // Acknowledge Telegram before doing slow work.
-    await sendMessage(chatId, "Processing your payment slip...");
+    // await sendMessage(chatId, "Processing your payment slip...");
+    await sendMessage(
+      chatId,
+      "กำลังตรวจสอบสลิป\nจนกว่าจะเสร็จอย่าพึ่งส่งสลิปต่อไป",
+    );
 
     const photo = photos[photos.length - 1];
     const image = await downloadTelegramPhoto(photo.file_id);
     const payment = await extractPayment(image);
     const transaction = await appendPayment(payment, chatId);
 
+    // await sendMessage(
+    //   chatId,
+    //   `Recorded successfully!\n\nTimestamp: ${transaction.transactionDate} ${transaction.transactionTime}\nTotal payment: ฿${payment.amount.toFixed(2)}`,
+    // );
+
     await sendMessage(
       chatId,
-      `Recorded successfully!\n\nTimestamp: ${transaction.transactionDate} ${transaction.transactionTime}\nTotal payment: ฿${payment.amount.toFixed(2)}`,
+      `บันทึกข้อมูลเรียบร้อย \n\nเวลา: ${transaction.transactionDate} ${transaction.transactionTime}\nยอด ฿${payment.amount.toFixed(2)}`,
     );
     await sendMessage(-5158137930, `Recorded successfully! Chat ID: ${chatId}`);
     return;
@@ -384,10 +399,11 @@ app.post("/telegram/webhook", async (req, res) => {
     console.error("Payment processing failed:", error);
 
     try {
-      await sendMessage(
-        chatId,
-        "I couldn't process this slip. Please check it and try again.",
-      );
+      // await sendMessage(
+      //   chatId,
+      //   "I couldn't process this slip. Please check it and try again.",
+      // );
+      await sendMessage(chatId, "ไม่สามารถบันทึกรายการได้โปรดตรวจสอบ");
     } catch (sendError) {
       console.error("Could not send Telegram reply:", sendError.message);
     }
