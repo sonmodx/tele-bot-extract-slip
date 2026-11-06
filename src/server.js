@@ -205,7 +205,7 @@ async function extractPayment(image) {
     response_format: { type: "json_object" },
   });
 
-  const text = response.choicesx[0]?.message?.content;
+  const text = response.choices[0]?.message?.content;
 
   if (!text) {
     throw new Error("AI returned an empty result");
