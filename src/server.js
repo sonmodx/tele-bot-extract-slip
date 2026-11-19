@@ -344,7 +344,7 @@ app.post("/telegram/webhook", async (req, res) => {
     chatId = message?.chat?.id;
     console.log("Request body:", req.body);
     console.log("Received message from chat ID:", chatId);
-    await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
+    // await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
     await sendMessage(-5158137930, `Request body: ${JSON.stringify(req.body)}`);
 
     if (!message || chatId == null) {
@@ -394,7 +394,10 @@ app.post("/telegram/webhook", async (req, res) => {
       chatId,
       `บันทึกข้อมูลเรียบร้อย \n\nเวลา: ${transaction.transactionDate} ${transaction.transactionTime}\nยอด ฿${payment.amount.toFixed(2)}`,
     );
-    await sendMessage(-5158137930, `Recorded successfully! Chat ID: ${chatId}`);
+    await sendMessage(
+      -5158137930,
+      `Recorded successfully! Chat ID: ${chatId} \nTimestamp: ${transaction.transactionDate} ${transaction.transactionTime}\nTotal payment: ฿${payment.amount.toFixed(2)}`,
+    );
     return;
   } catch (error) {
     console.error("Payment processing failed:", error);

@@ -41,3 +41,5 @@ async function main() {
 }
 
 main();
+
+//https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo
