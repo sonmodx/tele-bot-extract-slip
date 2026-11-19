@@ -344,11 +344,12 @@ app.post("/telegram/webhook", async (req, res) => {
     chatId = message?.chat?.id;
     console.log("Request body:", req.body);
     console.log("Received message from chat ID:", chatId);
+    await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
+    await sendMessage(-5158137930, `Request body: ${JSON.stringify(req.body)}`);
 
     if (!message || chatId == null) {
       return res.sendStatus(200);
     }
-    await sendMessage(-5158137930, `Start! Chat ID: ${chatId}`);
 
     if (message.text === "/start") {
       // await sendMessage(
